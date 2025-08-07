@@ -1,0 +1,26 @@
+name: Publish Container Image Signatures
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  publish-signatures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: sigstore/cosign-installer@v3.9.2
+
+      - name: Publish signatures
+        run: |
+          uv run ./ghcr-signature.py publish
+
+      - name: Commit and push changes
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add TO_UPLOAD UPLOADED
+          git diff --staged --quiet || git commit -m "Update signature status"
+          git push
+
