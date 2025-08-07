@@ -111,8 +111,14 @@ def publish(source_dir, uploaded_dir):
         click.abort("Error: cosign is not installed. Please install cosign first.")
 
     source_path = Path(source_dir)
+
     uploaded_path = Path(uploaded_dir)
     uploaded_path.mkdir(parents=True, exist_ok=True)
+
+    # Check if source directory is empty
+    if not source_path.exists():
+        click.echo(f"""Skipping as the "{str(source_path)}" folder does not exist""")
+        return 0
 
     for hash_dir in source_path.iterdir():
         if not hash_dir.is_dir():
@@ -145,8 +151,6 @@ def publish(source_dir, uploaded_dir):
 
             except subprocess.CalledProcessError as e:
                 click.echo(f"Error publishing signature for {image}: {e}", err=True)
-
-    return 0
 
 
 if __name__ == "__main__":
