@@ -1,0 +1,15 @@
+name: Verify signatures
+
+on:
+  pull_request:
+
+jobs:
+  verify-signatures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - uses: sigstore/cosign-installer@v3.9.2
+      - name: Verify signatures
+        run: |
+          uv run ./ghcr-signer.py verify

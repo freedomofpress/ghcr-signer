@@ -1,4 +1,4 @@
-name: Publish Container Image Signatures
+name: Publish signatures
 
 on:
   push:
@@ -24,13 +24,13 @@ jobs:
 
       - name: Publish signatures
         run: |
-          uv run ./ghcr-signature.py publish
+          uv run ./ghcr-signer.py publish
 
-      - name: Commit and push changes
+      - name: Git commit published signatures
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
           git add TO_UPLOAD UPLOADED
-          git diff --staged --quiet || git commit -m "Update signature status"
+          git diff --staged --quiet || git commit -m "Move published signatures"
           git push
 

@@ -4,16 +4,27 @@
 # ]
 # ///
 
-import click
+import shutil
 import subprocess
 from pathlib import Path
-import shutil
+
+import click
 
 
 def validate_hash(ctx, param, value):
     if "@sha256:" not in value:
         raise click.BadParameter("Should contain a hash")
     return value
+
+
+def ensure_cosign():
+    try:
+        subprocess.run(["which", "cosign"], check=True, capture_output=True)
+    except subprocess.CalledProcessError:
+        click.echo(
+            "Error: cosign is not installed. Please install cosign first.", err=True
+        )
+        raise click.Abort()
 
 
 @click.group()
@@ -30,12 +41,7 @@ def cli():
 @click.option("--sk", is_flag=True, help="Use a hardware security key for signing")
 def prepare(image, signatures_dir, key, sk):
     """Prepare the signatures for the given IMAGE and saves them to a local folder"""
-    try:
-        subprocess.run(["which", "cosign"], check=True, capture_output=True)
-    except subprocess.CalledProcessError:
-        click.echo(
-            "Error: cosign is not installed. Please install cosign first.", error=True
-        )
+    ensure_cosign()
 
     try:
         signatures_path = Path(signatures_dir)
@@ -100,16 +106,56 @@ def prepare(image, signatures_dir, key, sk):
     help="Directory with signature directories to publish",
 )
 @click.option(
+    "--pub-key",
+    default="trusted.pub",
+    help="Location of the public key",
+    type=click.Path(exists=True),
+)
+def verify(source_dir, pub_key):
+    """Verifies that the to-be-uploaded signatures match the trusted public key"""
+    source_path = Path(source_dir)
+    for hash_dir in source_path.iterdir():
+        if not hash_dir.is_dir():
+            continue
+
+        image_file = hash_dir / "IMAGE"
+        payload_file = hash_dir / "payload.json"
+        signature_file = hash_dir / "signature"
+
+        if image_file.exists() and payload_file.exists() and signature_file.exists():
+            image = image_file.read_text().strip()
+
+            verify_cmd = [
+                "cosign",
+                "verify-blob",
+                "--key",
+                pub_key,
+                "--signature",
+                str(signature_file),
+                str(payload_file),
+            ]
+
+            try:
+                subprocess.run(verify_cmd, check=True)
+                click.echo(f"Successfully verified signatures for {image}")
+
+            except subprocess.CalledProcessError as e:
+                click.echo(f"Error validating signatures for {image}: {e}", err=True)
+
+
+@cli.command()
+@click.option(
+    "--source-dir",
+    default="TO_UPLOAD",
+    help="Directory with signature directories to publish",
+)
+@click.option(
     "--uploaded-dir",
     default="UPLOADED",
     help="Directory to move successfully published signatures",
 )
 def publish(source_dir, uploaded_dir):
-    try:
-        subprocess.run(["which", "cosign"], check=True, capture_output=True)
-    except subprocess.CalledProcessError:
-        click.abort("Error: cosign is not installed. Please install cosign first.")
-
+    ensure_cosign()
     source_path = Path(source_dir)
 
     uploaded_path = Path(uploaded_dir)

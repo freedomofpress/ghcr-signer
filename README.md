@@ -1,39 +1,33 @@
 # GHCR Signature Publisher
 
-Publish signatures on ghcr.io when Github PAT (Personal Access Tokens) tokens are disabled.
+Publish container signatures to the Github Container Registry (ghcr.io) when Github Personal Access Tokens (PATs) are disabled.
 
-Traditionally, signatures are generated and published in one step using
-`cosign --sign` but in situations where Github PAT tokens are disabled (for
-security reasons), this is unpractical.
+*Disabling PATs is considered a good security practice: these tokens aren't fine-grained and as such can give more privileges than intended to the bearer. Unfortunately, the Github Container Registry doesn't provide any other mechanism of authentication?*
+
+Traditionally, container signatures are generated and published in one step using
+`cosign --sign`, but in situations where Github PAT tokens are disabled, this is unpractical.
 
 ## Usage
 
-### Preparing Signatures
+The flow is as follows:
+
+1. Prepare the signatures using the `ghcr-signer.py` script
+2. Create a pull request, with the signatures.
+3. The CI verifies the signatures are valid.
+4. A workflow is triggered when the signatures are published to the `main` branch.
+
+### Preparing the signatures
+
+Generate a signature and certificate locally, without uploading them:
 
 ```sh
 export IMAGE="ghcr.io/freedomofpress/dangerzone/dangerzone@sha256:<hash>"
-uv run ./ghcr-signature.py prepare --image "$IMAGE"
+uv run ./ghcr-signer.py prepare --image "$IMAGE"
 ```
-
-When receiving this command, the script will:
-
-- Extract the hash
-- Generate a payload using `cosign generate`
-- Generate a signature and certificate locally, without publishing them
-- Commit the generated signature and certificate files to a local directory under the image hash
 
 ### Publishing Signatures
 
 When the `main` branch is pushed, a workflow will:
 
-- Detect which hashes haven't been published yet
+- Detect which hashes haven't been uploaded yet
 - Attach signatures to the container registry using Github credentials
-- Move processed signatures to an `UPLOADED` directory
-
-## Workflow
-
-The GitHub Actions workflow automatically runs the `publish` command to:
-
-- Attach signatures to their respective images
-- Move processed signatures to the `UPLOADED` directory
-
