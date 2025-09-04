@@ -4,6 +4,7 @@
 # ]
 # ///
 
+import json
 import shutil
 import subprocess
 from pathlib import Path
@@ -17,12 +18,12 @@ def validate_hash(ctx, param, value):
     return value
 
 
-def ensure_cosign():
+def ensure_installed(binary):
     try:
-        subprocess.run(["which", "cosign"], check=True, capture_output=True)
+        subprocess.run(["which", binary], check=True, capture_output=True)
     except subprocess.CalledProcessError:
         click.echo(
-            "Error: cosign is not installed. Please install cosign first.", err=True
+            f"Error: cosign is not installed. Please install {binary} first.", err=True
         )
         raise click.Abort()
 
@@ -39,10 +40,16 @@ def cli():
 )
 @click.option("--key", help="Path to the signing key file")
 @click.option("--sk", is_flag=True, help="Use a hardware security key for signing")
-def prepare(image, signatures_dir, key, sk):
+@click.option("--recursive", is_flag=True)
+def prepare(image, signatures_dir, key, sk, recursive):
     """Prepare the signatures for the given IMAGE and saves them to a local folder"""
-    ensure_cosign()
+    ensure_installed("cosign")
+    if recursive:
+        ensure_installed("crane")
+    prepare_signature(image, signatures_dir, key, sk, recursive)
 
+
+def prepare_signature(image, signatures_dir, key, sk, recursive):
     try:
         signatures_path = Path(signatures_dir)
         signatures_path.mkdir(parents=True, exist_ok=True)
@@ -88,6 +95,15 @@ def prepare(image, signatures_dir, key, sk):
         # Execute signing
         subprocess.run(sign_cmd, check=True)
 
+        if recursive:
+            crane_cmd = ["crane", "manifest", image]
+            process = subprocess.run(crane_cmd, check=True, capture_output=True)
+            digests = [m["digest"] for m in json.loads(process.stdout)["manifests"]]
+            image_base = image.split("@sha256")[0]
+            for digest in digests:
+                sub_image = f"{image_base}@{digest}"
+                prepare_signature(sub_image, signatures_dir, key, sk, False)
+
         click.echo(f"Signature prepared for {image}")
         return 0
 
@@ -113,6 +129,7 @@ def prepare(image, signatures_dir, key, sk):
 )
 def verify(source_dir, pub_key):
     """Verifies that the to-be-published signatures match the trusted public key"""
+    ensure_installed("cosign")
     source_path = Path(source_dir)
     for hash_dir in source_path.iterdir():
         if not hash_dir.is_dir():
@@ -155,7 +172,7 @@ def verify(source_dir, pub_key):
     help="Destination directory for the published signatures",
 )
 def publish(source_dir, published_dir):
-    ensure_cosign()
+    ensure_installed("cosign")
     source_path = Path(source_dir)
 
     published_path = Path(published_dir)
