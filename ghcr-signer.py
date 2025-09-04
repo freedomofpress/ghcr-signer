@@ -35,7 +35,7 @@ def cli():
 @cli.command()
 @click.argument("image", callback=validate_hash)
 @click.option(
-    "--signatures-dir", default="TO_UPLOAD", help="Base directory to store signatures"
+    "--signatures-dir", default="TO_PUBLISH", help="Base directory to store signatures"
 )
 @click.option("--key", help="Path to the signing key file")
 @click.option("--sk", is_flag=True, help="Use a hardware security key for signing")
@@ -102,7 +102,7 @@ def prepare(image, signatures_dir, key, sk):
 @cli.command()
 @click.option(
     "--source-dir",
-    default="TO_UPLOAD",
+    default="TO_PUBLISH",
     help="Directory with signature directories to publish",
 )
 @click.option(
@@ -112,7 +112,7 @@ def prepare(image, signatures_dir, key, sk):
     type=click.Path(exists=True),
 )
 def verify(source_dir, pub_key):
-    """Verifies that the to-be-uploaded signatures match the trusted public key"""
+    """Verifies that the to-be-published signatures match the trusted public key"""
     source_path = Path(source_dir)
     for hash_dir in source_path.iterdir():
         if not hash_dir.is_dir():
@@ -146,20 +146,20 @@ def verify(source_dir, pub_key):
 @cli.command()
 @click.option(
     "--source-dir",
-    default="TO_UPLOAD",
+    default="TO_PUBLISH",
     help="Directory with signature directories to publish",
 )
 @click.option(
-    "--uploaded-dir",
-    default="UPLOADED",
-    help="Directory to move successfully published signatures",
+    "--published-dir",
+    default="PUBLISHED",
+    help="Destination directory for the published signatures",
 )
-def publish(source_dir, uploaded_dir):
+def publish(source_dir, published_dir):
     ensure_cosign()
     source_path = Path(source_dir)
 
-    uploaded_path = Path(uploaded_dir)
-    uploaded_path.mkdir(parents=True, exist_ok=True)
+    published_path = Path(published_dir)
+    published_path.mkdir(parents=True, exist_ok=True)
 
     # Check if source directory is empty
     if not source_path.exists():
@@ -191,8 +191,8 @@ def publish(source_dir, uploaded_dir):
                 ]
                 subprocess.run(attach_cmd, check=True)
 
-                # Move to uploaded directory
-                shutil.move(str(hash_dir), str(uploaded_path / hash_dir.name))
+                # Move to PUBLISHED directory
+                shutil.move(str(hash_dir), str(published_path / hash_dir.name))
                 click.echo(f"Successfully published signature for {image}")
 
             except subprocess.CalledProcessError as e:

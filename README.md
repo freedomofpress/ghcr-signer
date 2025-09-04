@@ -12,13 +12,13 @@ Traditionally, container signatures are generated and published in one step usin
 The flow is as follows:
 
 1. Prepare the signatures using the `ghcr-signer.py` script
-2. Create a pull request, with the signatures.
-3. The CI verifies the signatures are valid.
+2. Create a pull request, with the signatures
+3. The CI verifies the signatures are valid
 4. A workflow is triggered when the signatures are published to the `main` branch.
 
 ### Preparing the signatures
 
-Generate a signature and certificate locally, without uploading them:
+Generate a signature and certificate locally, without publishing them:
 
 ```sh
 export IMAGE="ghcr.io/freedomofpress/dangerzone/dangerzone@sha256:<hash>"
@@ -29,5 +29,5 @@ uv run ./ghcr-signer.py prepare --image "$IMAGE"
 
 When the `main` branch is pushed, a workflow will:
 
-- Detect which hashes haven't been uploaded yet
+- Detect which hashes haven't been published yet
 - Attach signatures to the container registry using Github credentials
