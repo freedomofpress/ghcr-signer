@@ -2,7 +2,7 @@
 
 Publish container signatures to the Github Container Registry (ghcr.io) when Github Personal Access Tokens (PATs) are disabled.
 
-*Disabling PATs is considered a good security practice: these tokens aren't fine-grained and as such can give more privileges than intended to the bearer. Unfortunately, the Github Container Registry doesn't provide any other mechanism of authentication?*
+*Disabling PATs is considered a good security practice: these tokens aren't fine-grained and as such can give more privileges than intended to the bearer. Unfortunately, the Github Container Registry doesn't provide any other mechanism of authentication*
 
 Traditionally, container signatures are generated and published in one step using
 `cosign --sign`, but in situations where Github PAT tokens are disabled, this is unpractical.
