@@ -197,6 +197,7 @@ def publish(source_dir, uploaded_dir):
 
             except subprocess.CalledProcessError as e:
                 click.echo(f"Error publishing signature for {image}: {e}", err=True)
+                raise click.Abort()
 
 
 if __name__ == "__main__":
