@@ -22,7 +22,7 @@ Generate a signature and certificate locally, without publishing them:
 
 ```sh
 export IMAGE="ghcr.io/freedomofpress/dangerzone/dangerzone@sha256:<hash>"
-uv run ./ghcr-signer.py prepare --image "$IMAGE"
+uv run ./ghcr-signer.py prepare "$IMAGE"
 ```
 
 ### Publishing Signatures
