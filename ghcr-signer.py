@@ -133,10 +133,10 @@ def prepare(image, signatures_dir, key, sk, recursive):
     """Prepare the signatures for the given IMAGE and saves them to a local folder"""
     ensure_installed("cosign", "crane")
     with local_registry():
-        prepare_signature(image, signatures_dir, key, sk, recursive)
+        prepare_signature(image, signatures_dir, key, sk, recursive, tag=True)
 
 
-def prepare_signature(image, signatures_dir, key, sk, recursive):
+def prepare_signature(image, signatures_dir, key, sk, recursive, tag=False):
     try:
         signatures_path = Path(signatures_dir)
         signatures_path.mkdir(parents=True, exist_ok=True)
@@ -182,6 +182,9 @@ def prepare_signature(image, signatures_dir, key, sk, recursive):
         blob = get_blob_from_manifest(manifest)
         save_blob_to(blob, image_sig_dir / "BLOB")
 
+        if tag:
+            (image_sig_dir / "LATEST").touch()
+
         if recursive:
             crane_cmd = ["crane", "manifest", image]
             process = subprocess_run(crane_cmd, check=True, capture_output=True)
@@ -189,7 +192,9 @@ def prepare_signature(image, signatures_dir, key, sk, recursive):
             image_base = image.split("@sha256")[0]
             for digest in digests:
                 sub_image = f"{image_base}@{digest}"
-                prepare_signature(sub_image, signatures_dir, key, sk, False)
+                prepare_signature(
+                    sub_image, signatures_dir, key, sk, recursive=False, tag=False
+                )
 
         click.echo(f"Signature prepared for {image}")
         return 0
