@@ -13,10 +13,13 @@ from pathlib import Path
 
 import click
 
+ASSETS = Path("./assets")
+COSIGN = ASSETS / "cosign"
+ORAS = ASSETS / "oras" / "oras"
+CRANE = ASSETS / "crane" / "crane"
+
 LOCAL_REGISTRY = "127.0.0.1:7777"
 LOCAL_REPOSITORY = f"{LOCAL_REGISTRY}/local-dangerzone"
-
-## Utilities
 
 
 def subprocess_run(args, **kwargs):
@@ -47,15 +50,12 @@ def get_blob_from_manifest(manifest):
     return blobs[0]
 
 
-## Subprocess calls
-
-
 @contextmanager
 def local_registry():
     """Start a local registry in a background process"""
     try:
         process = subprocess.Popen(
-            ["crane", "registry", "serve", "--address", LOCAL_REGISTRY]
+            [str(CRANE), "registry", "serve", "--address", LOCAL_REGISTRY]
         )
         yield process
     finally:
@@ -65,10 +65,10 @@ def local_registry():
 def ensure_installed(*binaries):
     for binary in binaries:
         try:
-            subprocess.run(["which", binary], check=True, capture_output=True)
+            subprocess.run(["which", str(binary)], check=True, capture_output=True)
         except subprocess.CalledProcessError:
             click.echo(
-                f"Error: {binary} is not installed. Please install it first.",
+                f"Error: {binary} is not installed. Please install it first using mazette install",
                 err=True,
             )
             raise click.Abort()
@@ -76,7 +76,7 @@ def ensure_installed(*binaries):
 
 def save_manifest_to(image_hash, destination):
     cmd_fetch_manifest = [
-        "oras",
+        str(ORAS),
         "manifest",
         "fetch",
         f"{LOCAL_REPOSITORY}:sha256-{image_hash}.sig",
@@ -92,7 +92,7 @@ def save_manifest_to(image_hash, destination):
 def save_blob_to(blob, destination):
     subprocess_run(
         [
-            "oras",
+            str(ORAS),
             "blob",
             "fetch",
             f"{LOCAL_REPOSITORY}@{blob}",
@@ -106,14 +106,11 @@ def save_blob_to(blob, destination):
 
 def cosign_verify(repository, on_local_repo=False):
     """Verifies that a signature is valid against a specified public key"""
-    cmd_verify = ["cosign", "verify", "-d", "--key", "trusted.pub", repository]
+    cmd_verify = [str(COSIGN), "verify", "-d", "--key", "trusted.pub", repository]
     env = os.environ.copy()
     if on_local_repo:
         env["COSIGN_REPOSITORY"] = LOCAL_REPOSITORY
     subprocess_run(cmd_verify, env=env, check=True)
-
-
-## Command line interfaces
 
 
 @click.group()
@@ -131,7 +128,7 @@ def cli():
 @click.option("--recursive", is_flag=True)
 def prepare(image, signatures_dir, key, sk, recursive):
     """Prepare the signatures for the given IMAGE and saves them to a local folder"""
-    ensure_installed("cosign", "crane")
+    ensure_installed(COSIGN, CRANE)
     with local_registry():
         prepare_signature(image, signatures_dir, key, sk, recursive, tag=True)
 
@@ -149,7 +146,7 @@ def prepare_signature(image, signatures_dir, key, sk, recursive, tag=False):
         (image_sig_dir / "IMAGE").write_text(image)
 
         cmd_sign = [
-            "cosign",
+            str(COSIGN),
             "sign",
             "-d",
             "-y",
@@ -186,7 +183,7 @@ def prepare_signature(image, signatures_dir, key, sk, recursive, tag=False):
             (image_sig_dir / "LATEST").touch()
 
         if recursive:
-            crane_cmd = ["crane", "manifest", image]
+            crane_cmd = [str(CRANE), "manifest", image]
             process = subprocess_run(crane_cmd, check=True, capture_output=True)
             digests = [m["digest"] for m in json.loads(process.stdout)["manifests"]]
             image_base = image.split("@sha256")[0]
@@ -208,7 +205,7 @@ def prepare_signature(image, signatures_dir, key, sk, recursive, tag=False):
 
 
 def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
-    ensure_installed("cosign", "oras")
+    ensure_installed(COSIGN, ORAS)
     source_path = Path(source_dir)
 
     for hash_dir in source_path.iterdir():
@@ -224,7 +221,7 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
             repo = LOCAL_REPOSITORY if on_local_repo else get_repo(image)
             # Push the MANIFEST file to the local registry
             cmd = [
-                "oras",
+                str(ORAS),
                 "manifest",
                 "push",
                 f"{repo}:sha256-{get_image_hash(image)}.sig",
@@ -243,7 +240,7 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
             # Push the BLOB to the local registry
             blob = get_blob_from_manifest(manifest_file)
             cmd = [
-                "oras",
+                str(ORAS),
                 "blob",
                 "push",
                 f"{repo}@{blob}",
@@ -260,7 +257,7 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
             )
             cosign_verify(image, on_local_repo=on_local_repo)
             if (hash_dir / "LATEST").exists() and tag_latest:
-                subprocess_run(["crane", "tag", image, "latest"], check=True)
+                subprocess_run([str(CRANE), "tag", image, "latest"], check=True)
 
 
 @cli.command()
