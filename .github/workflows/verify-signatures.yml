@@ -12,6 +12,7 @@ jobs:
       - name: Install vendored dependencies
         run: |
           uvx mazette install
+          ls -lah assets
       - name: Verify signatures
         run: |
           uv run ./ghcr-signer.py verify
