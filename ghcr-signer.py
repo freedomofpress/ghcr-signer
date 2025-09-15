@@ -202,7 +202,7 @@ def prepare_signature(image, signatures_dir, key, sk, recursive, tag=False):
         return 1
 
 
-def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
+def push_and_verify(source_dir, on_local_repo=True, tag_latest=False, move_to=None):
     ensure_installed()
     source_path = Path(source_dir)
 
@@ -257,6 +257,9 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
             if (hash_dir / "LATEST").exists() and tag_latest:
                 subprocess_run([str(CRANE), "tag", image, "latest"], check=True)
 
+            if move_to:
+                os.rename(hash_dir, move_to / hash_dir.stem)
+
 
 @cli.command()
 @click.option(
@@ -283,7 +286,9 @@ def verify(source_dir):
     help="Destination directory for the published signatures",
 )
 def publish(source_dir, published_dir):
-    push_and_verify(source_dir, on_local_repo=False, tag_latest=True)
+    push_and_verify(
+        source_dir, on_local_repo=False, tag_latest=True, move_to=Path(published_dir)
+    )
 
 
 if __name__ == "__main__":
