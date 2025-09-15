@@ -62,16 +62,14 @@ def local_registry():
         process.terminate()
 
 
-def ensure_installed(*binaries):
-    for binary in binaries:
-        try:
-            subprocess.run(["which", str(binary)], check=True, capture_output=True)
-        except subprocess.CalledProcessError:
-            click.echo(
-                f"Error: {binary} is not installed. Please install it first using mazette install",
-                err=True,
-            )
-            raise click.Abort()
+def ensure_installed():
+    is_installed = COSIGN.exists() and ORAS.exists() and CRANE.exists()
+    if not is_installed:
+        click.echo(
+            ("Error: Binaries are not installed. Please run mazette install"),
+            err=True,
+        )
+        raise click.Abort()
 
 
 def save_manifest_to(image_hash, destination):
@@ -128,7 +126,7 @@ def cli():
 @click.option("--recursive", is_flag=True)
 def prepare(image, signatures_dir, key, sk, recursive):
     """Prepare the signatures for the given IMAGE and saves them to a local folder"""
-    ensure_installed(COSIGN, CRANE)
+    ensure_installed()
     with local_registry():
         prepare_signature(image, signatures_dir, key, sk, recursive, tag=True)
 
@@ -205,7 +203,7 @@ def prepare_signature(image, signatures_dir, key, sk, recursive, tag=False):
 
 
 def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
-    ensure_installed(COSIGN, ORAS)
+    ensure_installed()
     source_path = Path(source_dir)
 
     for hash_dir in source_path.iterdir():
@@ -268,7 +266,7 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
 )
 def verify(source_dir):
     """Verifies that the to-be-published signatures match the trusted public key"""
-    ensure_installed("crane")
+    ensure_installed()
     with local_registry():
         push_and_verify(source_dir, on_local_repo=True)
 
