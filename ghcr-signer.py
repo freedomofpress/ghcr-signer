@@ -164,7 +164,6 @@ def prepare_signature(image, signatures_dir, key, sk, recursive, tag=False):
         # Execute signing to the local repository
         env = os.environ.copy()
         env["COSIGN_REPOSITORY"] = LOCAL_REPOSITORY
-        print(shlex.join(cmd_sign))
         subprocess_run(cmd_sign, env=env, check=True)
 
         # Ensure that the signatures are valid
