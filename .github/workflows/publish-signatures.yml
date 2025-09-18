@@ -3,6 +3,8 @@ name: Publish signatures
 on:
   push:
     branches: [main]
+    paths:
+      - 'TO_PUBLISH/**'
 
 jobs:
   publish-signatures:

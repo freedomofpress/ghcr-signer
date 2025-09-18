@@ -2,6 +2,8 @@ name: Verify signatures
 
 on:
   pull_request:
+    paths:
+      - 'TO_PUBLISH/**'
 
 jobs:
   verify-signatures:
