@@ -1,0 +1,1 @@
+{"critical":{"identity":{"docker-reference":"ghcr.io/apyrgio/dangerzone/dangerzone-testing"},"image":{"docker-manifest-digest":"sha256:b8ba5c94f5281bd8ae9598033a53f934f33546071f891bc6163c6507d14420c6"},"type":"cosign container image signature"},"optional":null}
