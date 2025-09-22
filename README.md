@@ -2,7 +2,7 @@
 
 Publish container signatures to the Github Container Registry (ghcr.io) when Github Personal Access Tokens (PATs) are disabled.
 
-*Disabling PATs is considered a good security practice: these tokens aren't fine-grained and as such can give more privileges than intended to the bearer. Unfortunately, the Github Container Registry [doesn't provide](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-to-the-container-registry) any other mechanism of authentication.*
+_Disabling PATs is considered a good security practice: these tokens aren't fine-grained and as such can give more privileges than intended to the bearer. Unfortunately, the Github Container Registry [doesn't provide](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#authenticating-to-the-container-registry) any other mechanism of authentication._
 
 Traditionally, container signatures are generated and published in one step using
 `cosign --sign`, but in situations where Github PAT tokens are disabled, this is impractical.
@@ -24,10 +24,10 @@ name and its hash, without labels:
 ```sh
 export IMAGE="ghcr.io/freedomofpress/dangerzone/dangerzone@sha256:<hash>"
 uv run ./ghcr-signer.py prepare "$IMAGE"
-
-*You should also use `--recursive` in case of multi-arch images, and either pass a key via
-`--key` or `--sk` (in case of a hardware key).*
 ```
+
+_You should also use `--recursive` in case of multi-arch images, and either pass a key via
+`--key` or `--sk` (in case of a hardware key)._
 
 ### Publishing Signatures
 
