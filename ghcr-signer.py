@@ -285,7 +285,10 @@ def verify(source_dir):
 )
 def publish(source_dir, published_dir):
     push_and_verify(
-        source_dir, on_local_repo=False, tag_latest=True, move_to=Path(published_dir)
+        source_dir,
+        on_local_repo=False,
+        tag_latest=True,
+        move_to=Path(published_dir),
     )
 
 
