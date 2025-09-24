@@ -231,7 +231,6 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False, move_to=No
             subprocess_run(
                 cmd,
                 check=True,
-                capture_output=True,
             )
 
             # Push the BLOB to the local registry
