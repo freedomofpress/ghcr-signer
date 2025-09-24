@@ -216,23 +216,6 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False, move_to=No
         if image_file.exists() and manifest_file.exists():
             image = image_file.read_text().strip()
             repo = LOCAL_REPOSITORY if on_local_repo else get_repo(image)
-            # Push the MANIFEST file to the local registry
-            cmd = [
-                str(ORAS),
-                "manifest",
-                "push",
-                f"{repo}:sha256-{get_image_hash(image)}.sig",
-                str(manifest_file),
-            ]
-
-            if on_local_repo:
-                cmd.append("--plain-http")
-
-            subprocess_run(
-                cmd,
-                check=True,
-            )
-
             # Push the BLOB to the local registry
             blob = get_blob_from_manifest(manifest_file)
             cmd = [
@@ -250,6 +233,24 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False, move_to=No
                 cmd,
                 check=True,
             )
+
+            # Push the MANIFEST file to the local registry
+            cmd = [
+                str(ORAS),
+                "manifest",
+                "push",
+                f"{repo}:sha256-{get_image_hash(image)}.sig",
+                str(manifest_file),
+            ]
+
+            if on_local_repo:
+                cmd.append("--plain-http")
+
+            subprocess_run(
+                cmd,
+                check=True,
+            )
+
             cosign_verify(image, on_local_repo=on_local_repo)
             if (hash_dir / "LATEST").exists() and tag_latest:
                 subprocess_run([str(CRANE), "tag", image, "latest"], check=True)
