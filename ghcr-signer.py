@@ -240,7 +240,6 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False, move_to=No
                 "blob",
                 "push",
                 f"{repo}@{blob}",
-                "--plain-http",
                 str(blob_file),
             ]
 
