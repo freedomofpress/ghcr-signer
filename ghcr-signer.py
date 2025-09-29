@@ -4,6 +4,7 @@
 # ]
 # ///
 
+import datetime
 import json
 import os
 import shlex
@@ -119,25 +120,39 @@ def cli():
 @cli.command()
 @click.argument("image", callback=validate_hash)
 @click.option(
-    "--signatures-dir", default="TO_PUBLISH", help="Base directory to store signatures"
+    "--signatures-dir", default="SIGNATURES", help="Base directory to store signatures"
 )
 @click.option("--key", help="Path to the signing key file")
 @click.option("--sk", is_flag=True, help="Use a hardware security key for signing")
-@click.option("--recursive", is_flag=True)
+@click.option("--recursive", is_flag=True, default=True)
 def prepare(image, signatures_dir, key, sk, recursive):
     """Prepare the signatures for the given IMAGE and saves them to a local folder"""
     ensure_installed()
     with local_registry():
-        prepare_signature(image, signatures_dir, key, sk, recursive, tag=True)
+        prepare_signature(
+            image,
+            signatures_dir,
+            key,
+            sk,
+            recursive,
+            date_folder=None,
+            tag=True,
+        )
 
 
-def prepare_signature(image, signatures_dir, key, sk, recursive, tag=False):
+def prepare_signature(
+    image, signatures_dir, key, sk, recursive, date_folder=None, tag=False
+):
     try:
         signatures_path = Path(signatures_dir)
         signatures_path.mkdir(parents=True, exist_ok=True)
 
+        if not date_folder:
+            now = datetime.datetime.now(datetime.UTC).isoformat(timespec="seconds")
+            date_folder = signatures_path / now
+
         image_hash = get_image_hash(image)
-        image_sig_dir = signatures_path / image_hash
+        image_sig_dir = date_folder / image_hash
         image_sig_dir.mkdir(parents=True, exist_ok=True)
 
         # Write image reference to a file
@@ -187,7 +202,13 @@ def prepare_signature(image, signatures_dir, key, sk, recursive, tag=False):
             for digest in digests:
                 sub_image = f"{image_base}@{digest}"
                 prepare_signature(
-                    sub_image, signatures_dir, key, sk, recursive=False, tag=False
+                    sub_image,
+                    signatures_dir,
+                    key,
+                    sk,
+                    recursive=False,
+                    date_folder=date_folder,
+                    tag=False,
                 )
 
         click.echo(f"Signature prepared for {image}")
@@ -201,11 +222,22 @@ def prepare_signature(image, signatures_dir, key, sk, recursive, tag=False):
         return 1
 
 
-def push_and_verify(source_dir, on_local_repo=True, tag_latest=False, move_to=None):
+def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
+    """
+    Push the prepared signatures to a (local) repository and verify their validity.
+    Caution: this only ensures the signatures in the latest folder are valid.
+    """
     ensure_installed()
-    source_path = Path(source_dir)
 
-    for hash_dir in source_path.iterdir():
+    # Get the latest active folder
+    source_path = Path(source_dir)
+    sorted_paths = sorted(list(source_path.iterdir()), reverse=True)
+    if not sorted_paths:
+        raise Exception("No valid path found")
+
+    date_path = sorted_paths[0]
+
+    for hash_dir in date_path.iterdir():
         if not hash_dir.is_dir():
             continue
 
@@ -255,14 +287,11 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False, move_to=No
             if (hash_dir / "LATEST").exists() and tag_latest:
                 subprocess_run([str(CRANE), "tag", image, "latest"], check=True)
 
-            if move_to:
-                os.rename(hash_dir, move_to / hash_dir.stem)
-
 
 @cli.command()
 @click.option(
     "--source-dir",
-    default="TO_PUBLISH",
+    default="SIGNATURES",
     help="Directory with signature directories to publish",
 )
 def verify(source_dir):
@@ -275,21 +304,11 @@ def verify(source_dir):
 @cli.command()
 @click.option(
     "--source-dir",
-    default="TO_PUBLISH",
+    default="SIGNATURES",
     help="Directory with signature directories to publish",
 )
-@click.option(
-    "--published-dir",
-    default="PUBLISHED",
-    help="Destination directory for the published signatures",
-)
 def publish(source_dir, published_dir):
-    push_and_verify(
-        source_dir,
-        on_local_repo=False,
-        tag_latest=True,
-        move_to=Path(published_dir),
-    )
+    push_and_verify(source_dir, on_local_repo=False, tag_latest=True)
 
 
 if __name__ == "__main__":

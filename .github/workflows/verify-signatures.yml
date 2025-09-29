@@ -3,7 +3,7 @@ name: Verify signatures
 on:
   pull_request:
     paths:
-      - 'TO_PUBLISH/**'
+      - 'SIGNATURES/**'
 
 jobs:
   verify-signatures:
