@@ -126,8 +126,8 @@ def cli():
 )
 @click.option("--key", help="Path to the signing key file")
 @click.option("--sk", is_flag=True, help="Use a hardware security key for signing")
-@click.option("--recursive", is_flag=True, default=True)
-def prepare(image, signatures_dir, key, sk, recursive):
+@click.option("--single-signature", is_flag=True, default=False)
+def prepare(image, signatures_dir, key, sk, single_signature):
     """Prepare the signatures for the given IMAGE and saves them to a local folder"""
     ensure_installed()
     with local_registry():
@@ -136,14 +136,14 @@ def prepare(image, signatures_dir, key, sk, recursive):
             signatures_dir,
             key,
             sk,
-            recursive,
+            single_signature,
             date_folder=None,
             tag=True,
         )
 
 
 def prepare_signature(
-    image, signatures_dir, key, sk, recursive, date_folder=None, tag=False
+    image, signatures_dir, key, sk, single_signature, date_folder=None, tag=False
 ):
     try:
         signatures_path = HERE / signatures_dir
@@ -196,7 +196,7 @@ def prepare_signature(
         if tag:
             (image_sig_dir / "LATEST").touch()
 
-        if recursive:
+        if not single_signature:
             crane_cmd = [str(CRANE), "manifest", image]
             process = subprocess_run(crane_cmd, check=True, capture_output=True)
             digests = [m["digest"] for m in json.loads(process.stdout)["manifests"]]
@@ -208,7 +208,7 @@ def prepare_signature(
                     signatures_dir,
                     key,
                     sk,
-                    recursive=False,
+                    single_signature=True,
                     date_folder=date_folder,
                     tag=False,
                 )
