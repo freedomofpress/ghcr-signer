@@ -2,8 +2,6 @@ name: Verify signatures
 
 on:
   pull_request:
-    paths:
-      - 'SIGNATURES/**'
 
 jobs:
   verify-signatures:
@@ -17,4 +15,4 @@ jobs:
           ls -lah assets
       - name: Verify signatures
         run: |
-          uv run ./ghcr-signer.py verify
+          uv run ./ghcr-signer.py verify-local
