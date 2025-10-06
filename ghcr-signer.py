@@ -14,10 +14,12 @@ from pathlib import Path
 
 import click
 
-ASSETS = Path("./assets")
+HERE = Path(__file__).parent
+ASSETS = HERE / Path("assets")
 COSIGN = ASSETS / "cosign"
 ORAS = ASSETS / "oras" / "oras"
 CRANE = ASSETS / "crane" / "crane"
+TRUSTED_PUB = HERE / "trusted.pub"
 
 LOCAL_REGISTRY = "127.0.0.1:7777"
 LOCAL_REPOSITORY = f"{LOCAL_REGISTRY}/local-dangerzone"
@@ -105,7 +107,7 @@ def save_blob_to(blob, destination):
 
 def cosign_verify(repository, on_local_repo=False):
     """Verifies that a signature is valid against a specified public key"""
-    cmd_verify = [str(COSIGN), "verify", "-d", "--key", "trusted.pub", repository]
+    cmd_verify = [str(COSIGN), "verify", "-d", "--key", str(TRUSTED_PUB), repository]
     env = os.environ.copy()
     if on_local_repo:
         env["COSIGN_REPOSITORY"] = LOCAL_REPOSITORY
@@ -144,7 +146,7 @@ def prepare_signature(
     image, signatures_dir, key, sk, recursive, date_folder=None, tag=False
 ):
     try:
-        signatures_path = Path(signatures_dir)
+        signatures_path = HERE / signatures_dir
         signatures_path.mkdir(parents=True, exist_ok=True)
 
         if not date_folder:
@@ -230,7 +232,7 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
     ensure_installed()
 
     # Get the latest active folder
-    source_path = Path(source_dir)
+    source_path = HERE / source_dir
     sorted_paths = sorted(list(source_path.iterdir()), reverse=True)
     if not sorted_paths:
         raise Exception("No valid path found")
