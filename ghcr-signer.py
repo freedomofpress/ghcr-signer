@@ -224,70 +224,79 @@ def prepare_signature(
         return 1
 
 
-def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
+def push_and_verify(
+    source_dir,
+    on_local_repo=True,
+    tag_latest=False,
+    check_all=False,
+):
     """
     Push the prepared signatures to a (local) repository and verify their validity.
-    Caution: this only ensures the signatures in the latest folder are valid.
     """
     ensure_installed()
 
     # Get the latest active folder
     source_path = HERE / source_dir
-    sorted_paths = sorted(list(source_path.iterdir()), reverse=True)
+    sorted_paths = [
+        f for f in sorted(list(source_path.iterdir()), reverse=True) if f.is_dir()
+    ]
     if not sorted_paths:
-        raise Exception("No valid path found")
+        click.echo("Nothing to verify, no valid path found")
 
-    date_path = sorted_paths[0]
+    for index, date_path in enumerate(sorted_paths):
+        for hash_dir in date_path.iterdir():
+            if not hash_dir.is_dir():
+                continue
 
-    for hash_dir in date_path.iterdir():
-        if not hash_dir.is_dir():
-            continue
+            image_file = hash_dir / "IMAGE"
+            manifest_file = hash_dir / "MANIFEST"
+            blob_file = hash_dir / "BLOB"
 
-        image_file = hash_dir / "IMAGE"
-        manifest_file = hash_dir / "MANIFEST"
-        blob_file = hash_dir / "BLOB"
+            if image_file.exists() and manifest_file.exists():
+                image = image_file.read_text().strip()
+                repo = LOCAL_REPOSITORY if on_local_repo else get_repo(image)
+                # Push the BLOB to the local registry
+                blob = get_blob_from_manifest(manifest_file)
+                cmd = [
+                    str(ORAS),
+                    "blob",
+                    "push",
+                    f"{repo}@{blob}",
+                    str(blob_file),
+                ]
 
-        if image_file.exists() and manifest_file.exists():
-            image = image_file.read_text().strip()
-            repo = LOCAL_REPOSITORY if on_local_repo else get_repo(image)
-            # Push the BLOB to the local registry
-            blob = get_blob_from_manifest(manifest_file)
-            cmd = [
-                str(ORAS),
-                "blob",
-                "push",
-                f"{repo}@{blob}",
-                str(blob_file),
-            ]
+                if on_local_repo:
+                    cmd.append("--plain-http")
 
-            if on_local_repo:
-                cmd.append("--plain-http")
+                subprocess_run(
+                    cmd,
+                    check=True,
+                )
 
-            subprocess_run(
-                cmd,
-                check=True,
-            )
+                # Push the MANIFEST file to the local registry
+                cmd = [
+                    str(ORAS),
+                    "manifest",
+                    "push",
+                    f"{repo}:sha256-{get_image_hash(image)}.sig",
+                    str(manifest_file),
+                ]
 
-            # Push the MANIFEST file to the local registry
-            cmd = [
-                str(ORAS),
-                "manifest",
-                "push",
-                f"{repo}:sha256-{get_image_hash(image)}.sig",
-                str(manifest_file),
-            ]
+                if on_local_repo:
+                    cmd.append("--plain-http")
 
-            if on_local_repo:
-                cmd.append("--plain-http")
+                subprocess_run(
+                    cmd,
+                    check=True,
+                )
 
-            subprocess_run(
-                cmd,
-                check=True,
-            )
+                cosign_verify(image, on_local_repo=on_local_repo)
+                if index == 0 and (hash_dir / "LATEST").exists() and tag_latest:
+                    subprocess_run([str(CRANE), "tag", image, "latest"], check=True)
 
-            cosign_verify(image, on_local_repo=on_local_repo)
-            if (hash_dir / "LATEST").exists() and tag_latest:
-                subprocess_run([str(CRANE), "tag", image, "latest"], check=True)
+        if not check_all:
+            # we just want to iterate once
+            break
 
 
 @cli.command()
@@ -296,11 +305,11 @@ def push_and_verify(source_dir, on_local_repo=True, tag_latest=False):
     default="SIGNATURES",
     help="Directory with signature directories to publish",
 )
-def verify(source_dir):
+def verify_local(source_dir):
     """Verifies that the to-be-published signatures match the trusted public key"""
     ensure_installed()
     with local_registry():
-        push_and_verify(source_dir, on_local_repo=True)
+        push_and_verify(source_dir, on_local_repo=True, check_all=True)
 
 
 @cli.command()
