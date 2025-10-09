@@ -17,7 +17,7 @@ jobs:
         run: |
           ruff check
           ruff format --check
-          uvx yamllint@1.37.1
+          uvx yamllint@1.37.1 .
 
   verify-signatures:
     runs-on: ubuntu-latest
