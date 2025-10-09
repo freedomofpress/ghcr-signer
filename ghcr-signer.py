@@ -9,6 +9,7 @@ import json
 import os
 import shlex
 import subprocess
+import sys
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -131,7 +132,7 @@ def prepare(image, signatures_dir, key, sk, single_signature):
     """Prepare the signatures for the given IMAGE and saves them to a local folder"""
     ensure_installed()
     with local_registry():
-        prepare_signature(
+        ret = prepare_signature(
             image,
             signatures_dir,
             key,
@@ -140,6 +141,7 @@ def prepare(image, signatures_dir, key, sk, single_signature):
             date_folder=None,
             tag=True,
         )
+    sys.exit(ret)
 
 
 def prepare_signature(
