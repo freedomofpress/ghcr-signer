@@ -24,7 +24,7 @@ name and its hash, without labels:
 
 ```sh
 export IMAGE="ghcr.io/freedomofpress/dangerzone/dangerzone@sha256:<hash>"
-uv run ./ghcr-signer.py prepare --recursive "$IMAGE"
+uv run ./ghcr-signer.py prepare "$IMAGE"
 ```
 
 _You should pass a key via `--key` or `--sk` (in case of a hardware key)._
