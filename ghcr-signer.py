@@ -320,7 +320,7 @@ def verify_local(source_dir):
     default="SIGNATURES",
     help="Directory with signature directories to publish",
 )
-def publish(source_dir, published_dir):
+def publish(source_dir):
     push_and_verify(source_dir, on_local_repo=False, tag_latest=True)
 
 
