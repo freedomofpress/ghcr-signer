@@ -28,6 +28,8 @@ LOCAL_REPOSITORY = f"{LOCAL_REGISTRY}/local-dangerzone"
 
 def subprocess_run(args, **kwargs):
     print(shlex.join(args))
+    if "check" not in kwargs:
+        kwargs["check"] = True
     return subprocess.run(args, **kwargs)
 
 
@@ -85,7 +87,7 @@ def save_manifest_to(image_hash, destination):
         "--plain-http",
     ]
 
-    process = subprocess.run(cmd_fetch_manifest, check=True, capture_output=True)
+    process = subprocess_run(cmd_fetch_manifest, capture_output=True)
 
     with open(destination, "bw") as f:
         f.write(process.stdout)
@@ -102,7 +104,6 @@ def save_blob_to(blob, destination):
             "--output",
             str(destination),
         ],
-        check=True,
     )
 
 
@@ -112,7 +113,7 @@ def cosign_verify(repository, on_local_repo=False):
     env = os.environ.copy()
     if on_local_repo:
         env["COSIGN_REPOSITORY"] = LOCAL_REPOSITORY
-    subprocess_run(cmd_verify, env=env, check=True)
+    subprocess_run(cmd_verify, env=env)
 
 
 @click.group()
@@ -183,7 +184,7 @@ def prepare_signature(
         # Execute signing to the local repository
         env = os.environ.copy()
         env["COSIGN_REPOSITORY"] = LOCAL_REPOSITORY
-        subprocess_run(cmd_sign, env=env, check=True)
+        subprocess_run(cmd_sign, env=env)
 
         # Ensure that the signatures are valid
         cosign_verify(image, on_local_repo=True)
@@ -200,7 +201,7 @@ def prepare_signature(
 
         if not single_signature:
             crane_cmd = [str(CRANE), "manifest", image]
-            process = subprocess_run(crane_cmd, check=True, capture_output=True)
+            process = subprocess_run(crane_cmd, capture_output=True)
             digests = [m["digest"] for m in json.loads(process.stdout)["manifests"]]
             image_base = image.split("@sha256")[0]
             for digest in digests:
@@ -270,10 +271,7 @@ def push_and_verify(
                 if on_local_repo:
                     cmd.append("--plain-http")
 
-                subprocess_run(
-                    cmd,
-                    check=True,
-                )
+                subprocess_run(cmd)
 
                 # Push the MANIFEST file to the local registry
                 cmd = [
@@ -289,12 +287,11 @@ def push_and_verify(
 
                 subprocess_run(
                     cmd,
-                    check=True,
                 )
 
                 cosign_verify(image, on_local_repo=on_local_repo)
                 if index == 0 and (hash_dir / "LATEST").exists() and tag_latest:
-                    subprocess_run([str(CRANE), "tag", image, "latest"], check=True)
+                    subprocess_run([str(CRANE), "tag", image, "latest"])
 
         if not check_all:
             # we just want to iterate once
