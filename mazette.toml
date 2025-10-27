@@ -26,7 +26,7 @@ extract.flatten = true
 
 [asset.cosign]
 repo = "sigstore/cosign"
-version = ">=2.6.0"
+version = "==2.6.1"
 platform."darwin/amd64" = "cosign-darwin-amd64"
 platform."darwin/arm64" = "cosign-darwin-arm64"
 platform."linux/amd64" = "cosign-linux-amd64"
