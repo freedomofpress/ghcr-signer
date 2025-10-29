@@ -256,9 +256,12 @@ def push_and_verify(
     on_local_repo=True,
     tag_latest=False,
     check_all=False,
+    run_cosign_save=True,
 ):
     """
     Push the prepared signatures to a (local) repository and verify their validity.
+    If run_cosign_save is True, also save the image locally and perform offline
+    verification. This requires the main image to be reachable.
     """
     ensure_installed()
 
@@ -307,6 +310,40 @@ def push_and_verify(
                 )
 
                 cosign_verify(image, on_local_repo=on_local_repo)
+
+                # Offline re-verification of the published image + signature.
+                # (Not used by in the verify path, only when publishing).
+                if run_cosign_save:
+                    oci_image_folder = hash_dir / "OCI_IMAGE"
+                    oci_image_folder.mkdir(parents=True, exist_ok=True)
+
+                    # Save the image and its signature to a local OCI layout
+                    cmd_save = [
+                        str(COSIGN),
+                        "save",
+                        "--dir",
+                        str(oci_image_folder),
+                        image,
+                    ]
+                    if on_local_repo:
+                        cmd_save.append("--allow-http-registry")
+                    env = os.environ.copy()
+                    if on_local_repo:
+                        env["COSIGN_REPOSITORY"] = LOCAL_REPOSITORY
+                    subprocess_run(cmd_save, env=env, check=True)
+
+                    # Verify the saved image fully offline
+                    cmd_verify_offline = [
+                        str(COSIGN),
+                        "verify",
+                        "--key",
+                        str(TRUSTED_PUB),
+                        "--offline",
+                        "--local-image",
+                        str(oci_image_folder),
+                    ]
+                    subprocess_run(cmd_verify_offline, check=True)
+
                 if index == 0 and (hash_dir / "LATEST").exists() and tag_latest:
                     subprocess_run([str(CRANE), "tag", image, "latest"], check=True)
 
@@ -325,7 +362,12 @@ def verify_local(source_dir):
     """Verifies that the to-be-published signatures match the trusted public key"""
     ensure_installed()
     with local_registry():
-        push_and_verify(source_dir, on_local_repo=True, check_all=True)
+        push_and_verify(
+            source_dir,
+            on_local_repo=True,
+            check_all=True,
+            run_cosign_save=False,
+        )
 
 
 @cli.command()
