@@ -45,13 +45,17 @@ def get_repo(image):
     return image.split("@sha256")[0]
 
 
-def get_blob_from_manifest(manifest):
+def get_blobs_from_manifest(manifest):
     loaded_manifest = json.load(manifest.open())
     blobs = [layer["digest"] for layer in loaded_manifest["layers"]]
 
     if len(blobs) != 1:
         raise Exception("There should be exactly one blob. Bailing out")
-    return blobs[0]
+
+    if "config" not in loaded_manifest or "digest" not in loaded_manifest["config"]:
+        raise Exception("Config digest not found in manifest. Bailing out")
+
+    return blobs[0], loaded_manifest["config"]["digest"]
 
 
 @contextmanager
@@ -104,6 +108,22 @@ def save_blob_to(blob, destination):
         ],
         check=True,
     )
+
+
+def push_blob(repo, blob_digest, blob_file, on_local_repo):
+    """Push a blob to the registry"""
+    cmd = [
+        str(ORAS),
+        "blob",
+        "push",
+        f"{repo}@{blob_digest}",
+        str(blob_file),
+    ]
+
+    if on_local_repo:
+        cmd.append("--plain-http")
+
+    subprocess_run(cmd, check=True)
 
 
 def cosign_verify(repository, on_local_repo=False):
@@ -189,11 +209,12 @@ def prepare_signature(
         cosign_verify(image, on_local_repo=True)
 
         manifest = image_sig_dir / "MANIFEST"
-        # Store the MANIFEST and the related blob to local files
+        # Store the MANIFEST and the related blobs to local files
         save_manifest_to(image_hash, manifest)
 
-        blob = get_blob_from_manifest(manifest)
-        save_blob_to(blob, image_sig_dir / "BLOB")
+        signing_blob, config_blob = get_blobs_from_manifest(manifest)
+        save_blob_to(signing_blob, image_sig_dir / "BLOB")
+        save_blob_to(config_blob, image_sig_dir / "CONFIG_BLOB")
 
         if tag:
             (image_sig_dir / "LATEST").touch()
@@ -253,29 +274,18 @@ def push_and_verify(
             image_file = hash_dir / "IMAGE"
             manifest_file = hash_dir / "MANIFEST"
             blob_file = hash_dir / "BLOB"
+            config_blob_file = hash_dir / "CONFIG_BLOB"
 
             if image_file.exists() and manifest_file.exists():
                 image = image_file.read_text().strip()
                 repo = LOCAL_REPOSITORY if on_local_repo else get_repo(image)
-                # Push the BLOB to the local registry
-                blob = get_blob_from_manifest(manifest_file)
-                cmd = [
-                    str(ORAS),
-                    "blob",
-                    "push",
-                    f"{repo}@{blob}",
-                    str(blob_file),
-                ]
+                # Push the blobs to the registry
+                signing_blob, config_blob = get_blobs_from_manifest(manifest_file)
 
-                if on_local_repo:
-                    cmd.append("--plain-http")
+                push_blob(repo, signing_blob, blob_file, on_local_repo)
+                push_blob(repo, config_blob, config_blob_file, on_local_repo)
 
-                subprocess_run(
-                    cmd,
-                    check=True,
-                )
-
-                # Push the MANIFEST file to the local registry
+                # Push the MANIFEST file
                 cmd = [
                     str(ORAS),
                     "manifest",
