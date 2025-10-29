@@ -46,6 +46,7 @@ def get_repo(image):
 
 
 def get_blobs_from_manifest(manifest):
+    """Returns the payload blob and the config blob digests, from the manifest"""
     loaded_manifest = json.load(manifest.open())
     blobs = [layer["digest"] for layer in loaded_manifest["layers"]]
 
@@ -212,8 +213,8 @@ def prepare_signature(
         # Store the MANIFEST and the related blobs to local files
         save_manifest_to(image_hash, manifest)
 
-        signing_blob, config_blob = get_blobs_from_manifest(manifest)
-        save_blob_to(signing_blob, image_sig_dir / "BLOB")
+        payload_blob, config_blob = get_blobs_from_manifest(manifest)
+        save_blob_to(payload_blob, image_sig_dir / "PAYLOAD_BLOB")
         save_blob_to(config_blob, image_sig_dir / "CONFIG_BLOB")
 
         if tag:
@@ -273,16 +274,16 @@ def push_and_verify(
 
             image_file = hash_dir / "IMAGE"
             manifest_file = hash_dir / "MANIFEST"
-            blob_file = hash_dir / "BLOB"
+            payload_blob_file = hash_dir / "PAYLOAD_BLOB"
             config_blob_file = hash_dir / "CONFIG_BLOB"
 
             if image_file.exists() and manifest_file.exists():
                 image = image_file.read_text().strip()
                 repo = LOCAL_REPOSITORY if on_local_repo else get_repo(image)
                 # Push the blobs to the registry
-                signing_blob, config_blob = get_blobs_from_manifest(manifest_file)
+                payload_blob, config_blob = get_blobs_from_manifest(manifest_file)
 
-                push_blob(repo, signing_blob, blob_file, on_local_repo)
+                push_blob(repo, payload_blob, payload_blob_file, on_local_repo)
                 push_blob(repo, config_blob, config_blob_file, on_local_repo)
 
                 # Push the MANIFEST file
