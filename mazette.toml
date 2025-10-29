@@ -27,9 +27,20 @@ extract.flatten = true
 [asset.cosign]
 repo = "sigstore/cosign"
 version = "<3.0.0"
-platform."darwin/amd64" = "cosign-darwin-amd64"
+# FIXME: We currently need to get a different cosign version, due to
+# https://github.com/freedomofpress/ghcr-signer/issues/16
+#platform."darwin/amd64" = "cosign-darwin-amd64"
 platform."darwin/arm64" = "cosign-darwin-arm64"
 platform."linux/amd64" = "cosign-linux-amd64"
 platform."windows/amd64" = "cosign-windows-amd64.exe"
+executable = true
+destination = "assets/cosign"
+
+# Intel macOS-only asset, with support for multiple PIVs
+# FIXME: Use the official client, once we upstream our changes.
+[asset.cosign-multi-piv]
+repo = "freedomofpress/maint-dangerzone-cosign"
+version = "<3.0.0"
+platform."darwin/amd64" = "cosign-darwin-amd64"
 executable = true
 destination = "assets/cosign"

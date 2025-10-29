@@ -95,15 +95,6 @@
       }
     },
     "cosign": {
-      "darwin/amd64": {
-        "repo": "sigstore/cosign",
-        "download_url": "https://github.com/sigstore/cosign/releases/download/v2.6.1/cosign-darwin-amd64",
-        "version": "2.6.1",
-        "checksum": "f1ed2787cc9648fd3c644fcb279e43f3f55da63b788d69a527aa14ad97ffdca1",
-        "executable": true,
-        "destination": "assets/cosign",
-        "extract": false
-      },
       "darwin/arm64": {
         "repo": "sigstore/cosign",
         "download_url": "https://github.com/sigstore/cosign/releases/download/v2.6.1/cosign-darwin-arm64",
@@ -131,7 +122,18 @@
         "destination": "assets/cosign",
         "extract": false
       }
+    },
+    "cosign-multi-piv": {
+      "darwin/amd64": {
+        "repo": "freedomofpress/maint-dangerzone-cosign",
+        "download_url": "https://github.com/freedomofpress/maint-dangerzone-cosign/releases/download/v2.6.1-fpf/cosign-darwin-amd64",
+        "version": "2.6.1-fpf",
+        "checksum": "26f21804f958440744bebd631bc4a3979a433e50ff39b28ba566f9beb0245cea",
+        "executable": true,
+        "destination": "assets/cosign",
+        "extract": false
+      }
     }
   },
-  "config_checksum": "7a0fb4503bcfcd6bac58d494cff5e2d82b85951f3dcc1c8a79576049961f5e22"
+  "config_checksum": "d7489b467ecbc6bc499a92386672b17d3256f4ac451e4e667da373d841c7bca6"
 }
