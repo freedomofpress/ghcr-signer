@@ -253,9 +253,11 @@ def push_and_verify(
     on_local_repo=True,
     tag_latest=False,
     check_all=False,
+    run_cosign_save=True,
 ):
     """
     Push the prepared signatures to a (local) repository and verify their validity.
+    If run_cosign_save is True, also save the image locally and perform offline verification.
     """
     ensure_installed()
 
@@ -304,6 +306,36 @@ def push_and_verify(
                 )
 
                 cosign_verify(image, on_local_repo=on_local_repo)
+
+                # Perform a cosign save + cosign verify if requested
+                if run_cosign_save:
+                    oci_image_folder = hash_dir / "OCI_IMAGE"
+                    oci_image_folder.mkdir(parents=True, exist_ok=True)
+
+                    # Save the image locally using cosign save
+                    cmd_save = [
+                        str(COSIGN),
+                        "save",
+                        image,
+                        str(oci_image_folder),
+                    ]
+                    env = os.environ.copy()
+                    if on_local_repo:
+                        env["COSIGN_REPOSITORY"] = LOCAL_REPOSITORY
+                    subprocess_run(cmd_save, env=env, check=True)
+
+                    # Verify offline using the saved image
+                    cmd_verify_offline = [
+                        str(COSIGN),
+                        "verify",
+                        "--key",
+                        str(TRUSTED_PUB),
+                        "--offline",
+                        "--local-image",
+                        str(oci_image_folder),
+                    ]
+                    subprocess_run(cmd_verify_offline, check=True)
+
                 if index == 0 and (hash_dir / "LATEST").exists() and tag_latest:
                     subprocess_run([str(CRANE), "tag", image, "latest"], check=True)
 
@@ -322,7 +354,11 @@ def verify_local(source_dir):
     """Verifies that the to-be-published signatures match the trusted public key"""
     ensure_installed()
     with local_registry():
-        push_and_verify(source_dir, on_local_repo=True, check_all=True)
+        push_and_verify(
+            source_dir,
+            on_local_repo=True,
+            check_all=True,
+        )
 
 
 @cli.command()
