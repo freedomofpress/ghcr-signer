@@ -1,0 +1,1 @@
+{"critical":{"identity":{"docker-reference":"ghcr.io/freedomofpress/dangerzone/v1"},"image":{"docker-manifest-digest":"sha256:6a8f88b086600c8b48b4db58c53429e485e558735f02c3ea21da550b71386606"},"type":"cosign container image signature"},"optional":null}
