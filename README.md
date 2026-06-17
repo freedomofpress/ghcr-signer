@@ -13,6 +13,8 @@ The flow is as follows:
 
 1. Prepare the signatures locally
 2. Create a pull request, with the signatures
+   - You can run the `generate-report.py` script to generate a report for the
+     candidate image that you can attach in the PR body.
 3. The CI ensures signatures are valid
 4. The pull request is merged in the `main` branch
 5. A workflow is triggered, publishing the signatures to the registry.
