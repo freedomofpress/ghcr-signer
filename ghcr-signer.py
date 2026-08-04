@@ -10,6 +10,7 @@ import os
 import shlex
 import subprocess
 import sys
+import time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -66,6 +67,8 @@ def local_registry():
         process = subprocess.Popen(
             [str(CRANE), "registry", "serve", "--address", LOCAL_REGISTRY]
         )
+        # Give the registry a moment to bind the port before anyone connects
+        time.sleep(2)
         yield process
     finally:
         process.terminate()
