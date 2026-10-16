@@ -155,7 +155,11 @@ def cli():
 @click.option(
     "--signatures-dir", default="SIGNATURES", help="Base directory to store signatures"
 )
-@click.option("--key", help="Path to the signing key file")
+@click.option(
+    "--key",
+    type=click.Path(exists=True, dir_okay=False, readable=True, resolve_path=True),
+    help="Path to the signing key file",
+)
 @click.option("--sk", is_flag=True, help="Use a hardware security key for signing")
 @click.option("--single-signature", is_flag=True, default=False)
 def prepare(image, signatures_dir, key, sk, single_signature):
