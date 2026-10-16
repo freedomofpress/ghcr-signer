@@ -7,6 +7,7 @@
 import datetime
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -32,9 +33,14 @@ def subprocess_run(args, **kwargs):
     return subprocess.run(args, **kwargs)
 
 
+IMAGE_HASH_RE = re.compile(r"^[\w.\-/]+[@:]sha256:[a-fA-F0-9]{64}$")
+
+
 def validate_hash(ctx, param, value):
-    if "@sha256:" not in value:
-        raise click.BadParameter("Should contain a hash")
+    if not IMAGE_HASH_RE.match(value):
+        raise click.BadParameter(
+            "Should be an image reference with a sha256 hash, e.g. repo/image@sha256:abc..."
+        )
     return value
 
 
@@ -43,7 +49,7 @@ def get_image_hash(image):
 
 
 def get_repo(image):
-    return image.split("@sha256")[0]
+    return image.split("@sha256:")[0]
 
 
 def get_blobs_from_manifest(manifest):
@@ -149,7 +155,11 @@ def cli():
 @click.option(
     "--signatures-dir", default="SIGNATURES", help="Base directory to store signatures"
 )
-@click.option("--key", help="Path to the signing key file")
+@click.option(
+    "--key",
+    type=click.Path(exists=True, dir_okay=False, readable=True, resolve_path=True),
+    help="Path to the signing key file",
+)
 @click.option("--sk", is_flag=True, help="Use a hardware security key for signing")
 @click.option("--single-signature", is_flag=True, default=False)
 def prepare(image, signatures_dir, key, sk, single_signature):
@@ -226,7 +236,13 @@ def prepare_signature(
         if not single_signature:
             crane_cmd = [str(CRANE), "manifest", image]
             process = subprocess_run(crane_cmd, check=True, capture_output=True)
-            digests = [m["digest"] for m in json.loads(process.stdout)["manifests"]]
+            manifest_data = json.loads(process.stdout)
+            manifests = manifest_data.get("manifests")
+            if manifests is None:
+                raise click.ClickException(
+                    f"No manifests found in {image}. Is it a multi-arch image?"
+                )
+            digests = [m["digest"] for m in manifests]
             image_base = image.split("@sha256")[0]
             for digest in digests:
                 sub_image = f"{image_base}@{digest}"
