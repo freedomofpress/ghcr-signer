@@ -7,6 +7,7 @@
 import datetime
 import json
 import os
+import re
 import shlex
 import subprocess
 import sys
@@ -32,9 +33,14 @@ def subprocess_run(args, **kwargs):
     return subprocess.run(args, **kwargs)
 
 
+IMAGE_HASH_RE = re.compile(r"^[\w.\-/]+[@:]sha256:[a-fA-F0-9]{64}$")
+
+
 def validate_hash(ctx, param, value):
-    if "@sha256:" not in value:
-        raise click.BadParameter("Should contain a hash")
+    if not IMAGE_HASH_RE.match(value):
+        raise click.BadParameter(
+            "Should be an image reference with a sha256 hash, e.g. repo/image@sha256:abc..."
+        )
     return value
 
 
