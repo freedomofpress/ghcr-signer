@@ -48,7 +48,7 @@ def get_image_hash(image):
 
 
 def get_repo(image):
-    return image.split("@sha256")[0]
+    return image.split("@sha256:")[0]
 
 
 def get_blobs_from_manifest(manifest):
