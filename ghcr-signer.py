@@ -236,7 +236,13 @@ def prepare_signature(
         if not single_signature:
             crane_cmd = [str(CRANE), "manifest", image]
             process = subprocess_run(crane_cmd, check=True, capture_output=True)
-            digests = [m["digest"] for m in json.loads(process.stdout)["manifests"]]
+            manifest_data = json.loads(process.stdout)
+            manifests = manifest_data.get("manifests")
+            if manifests is None:
+                raise click.ClickException(
+                    f"No manifests found in {image}. Is it a multi-arch image?"
+                )
+            digests = [m["digest"] for m in manifests]
             image_base = image.split("@sha256")[0]
             for digest in digests:
                 sub_image = f"{image_base}@{digest}"
