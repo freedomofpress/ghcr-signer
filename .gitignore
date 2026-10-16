@@ -1,1 +1,9 @@
 assets/
+*.key
+*.pem
+*.p8
+*.pkcs8
+*.token
+*.secret
+pat_token
+
